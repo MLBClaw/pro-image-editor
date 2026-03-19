@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Image Editor - 专业图像编辑器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #2b2b2b;
+            color: #fff;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 顶部菜单栏 */
+        .menu-bar {
+            background: #3c3c3c;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            border-bottom: 1px solid #555;
+            font-size: 13px;
+        }
+
+        .menu-item {
+            padding: 5px 12px;
+            cursor: pointer;
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .menu-item:hover {
+            background: #505050;
+        }
+
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            border-radius: 4px;
+            min-width: 180px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .menu-item:hover .menu-dropdown {
+            display: block;
+        }
+
+        .menu-dropdown-item {
+            padding: 8px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .menu-dropdown-item:hover {
+            background: #505050;
+        }
+
+        .menu-shortcut {
+            color: #999;
+            font-size: 11px;
+        }
+
+        .menu-separator {
+            height: 1px;
+            background: #555;
+            margin: 5px 0;
+        }
+
+        /* 主容器 */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 30px);
+        }
+
+        /* 左侧面板 - 工具 */
+        .left-panel {
+            width: 60px;
+            background: #3c3c3c;
+            border-right: 1px solid #555;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .tool-btn {
+            width: 40px;
+            height: 40px;
+            margin: 2px 0;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #ccc;
+            transition: all 0.2s;
+        }
+
+        .tool-btn:hover {
+            background: #505050;
+            color: #fff;
+        }
+
+        .tool-btn.active {
+            background: #0078d4;
+            border-color: #106ebe;
+            color: #fff;
+        }
+
+        .tool-separator {
+            width: 30px;
+            height: 1px;
+            background: #555;
+            margin: 10px 0;
+        }
+
+        /* 中间画布区域 */
+        .canvas-container {
+            flex: 1;
+            background: #1e1e1e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+            position: relative;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        #mainCanvas {
+            background: #fff;
+            cursor: crosshair;
+        }
+
+        #tempCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        /* 右侧面板 */
+        .right-panel {
+            width: 280px;
+            background: #3c3c3c;
+            border-left: 1px solid #555;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-section {
+            border-bottom: 1px solid #555;
+            padding: 15px;
+        }
+
+        .panel-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #ccc;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* 图层面板 */
+        .layers-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background: #484848;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .layer-item:hover {
+            background: #505050;
+        }
+
+        .layer-item.active {
+            background: #0078d4;
+        }
+
+        .layer-visibility {
+            width: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .layer-name {
+            flex: 1;
+            margin-left: 8px;
+        }
+
+        .layer-opacity {
+            width: 50px;
+            background: transparent;
+            border: none;
+            color: #fff;
+            text-align: right;
+            font-size: 11px;
+        }
+
+        .layer-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .layer-btn {
+            flex: 1;
+            padding: 6px;
+            background: #505050;
+            border: 1px solid #666;
+            color: #fff;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .layer-btn:hover {
+            background: #606060;
+        }
+
+        /* 调整面板 */
+        .adjustment-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .adjustment-label {
+            width: 70px;
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .adjustment-slider {
+            flex: 1;
+            margin: 0 10px;
+            -webkit-appearance: none;
+            height: 4px;
+            background: #555;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .adjustment-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #0078d4;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .adjustment-value {
+            width: 40px;
+            text-align: right;
+            font-size: 12px;
+            color: #fff;
+        }
+
+        /* 颜色选择器 */
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        #colorPicker {
+            width: 50px;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .color-info {
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        /* 画笔设置 */
+        .brush-size-row {
+            margin-bottom: 15px;
+        }
+
+        .brush-preview {
+            width: 100%;
+            height: 60px;
+            background: #484848;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #brushPreviewCircle {
+            background: #fff;
+            border-radius: 50%;
+        }
+
+        /* 滤镜按钮 */
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .filter-btn {
+            padding: 8px;
+            background: #505050;
+            border: 1px solid #666;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            text-align: center;
+        }
+
+        .filter-btn:hover {
+            background: #606060;
+            border-color: #0078d4;
+        }
+
+        /* 状态栏 */
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 24px;
+            background: #0078d4;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            font-size: 12px;
+            z-index: 100;
+        }
+
+        .status-item {
+            margin-right: 20px;
+        }
+
+        /* 浮动面板 */
+        .floating-panel {
+            position: fixed;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            display: none;
+            z-index: 1000;
+        }
+
+        .floating-panel.show {
+            display: block;
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #3c3c3c;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+
+        /* 输入框 */
+        input[type="text"], input[type="number"] {
+            background: #484848;
+            border: 1px solid #666;
+            color: #fff;
+            padding: 5px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #0078d4;
+        }
+
+        /* 对话框 */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .dialog-overlay.show {
+            display: flex;
+        }
+
+        .dialog {
+            background: #3c3c3c;
+            border-radius: 8px;
+            padding: 20px;
+            min-width: 300px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .dialog-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .dialog-content {
+            margin-bottom: 20px;
+        }
+
+        .dialog-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .dialog-btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .dialog-btn.primary {
+            background: #0078d4;
+            color: #fff;
+        }
+
+        .dialog-btn.secondary {
+            background: #505050;
+            color: #fff;
+        }
+
+        /* 文字工具输入框 */
+        .text-input-overlay {
+            position: absolute;
+            display: none;
+            z-index: 100;
+        }
+
+        .text-input-overlay input {
+            background: transparent;
+            border: 1px dashed #0078d4;
+            color: #fff;
+            padding: 5px;
+            font-size: 20px;
+            min-width: 100px;
+            outline: none;
+        }
+
+        /* 选区样式 */
+        .selection-marching-ants {
+            position: absolute;
+            border: 2px dashed #0078d4;
+            pointer-events: none;
+            animation: marching-ants 1s linear infinite;
+        }
+
+        @keyframes marching-ants {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: 20; }
+        }
+
+        /* 历史记录面板 */
+        .history-list {
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 11px;
+        }
+
+        .history-item {
+            padding: 5px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        .history-item:hover {
+            background: #505050;
+        }
+
+        .history-item.current {
+            background: #0078d4;
+        }
+
+        /* 缩放控制 */
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .zoom-btn {
+            width: 28px;
+            height: 28px;
+            background: #505050;
+            border: 1px solid #666;
+            color: #fff;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .zoom-value {
+            font-size: 12px;
+            min-width: 50px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- 菜单栏 -->
+    <div class="menu-bar">
+        <div class="menu-item">
+            文件
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="fileNew()">新建 <span class="menu-shortcut">Ctrl+N</span></div>
+                <div class="menu-dropdown-item" onclick="fileOpen()">打开 <span class="menu-shortcut">Ctrl+O</span></div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="fileSave()">保存 <span class="menu-shortcut">Ctrl+S</span></div>
+                <div class="menu-dropdown-item" onclick="fileExport()">导出为 <span class="menu-shortcut">Ctrl+E</span></div>
+            </div>
+        </div>
+        <div class="menu-item">
+            编辑
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="undo()">撤销 <span class="menu-shortcut">Ctrl+Z</span></div>
+                <div class="menu-dropdown-item" onclick="redo()">重做 <span class="menu-shortcut">Ctrl+Y</span></div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="cut()">剪切 <span class="menu-shortcut">Ctrl+X</span></div>
+                <div class="menu-dropdown-item" onclick="copy()">复制 <span class="menu-shortcut">Ctrl+C</span></div>
+                <div class="menu-dropdown-item" onclick="paste()">粘贴 <span class="menu-shortcut">Ctrl+V</span></div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="selectAll()">全选 <span class="menu-shortcut">Ctrl+A</span></div>
+                <div class="menu-dropdown-item" onclick="deselect()">取消选择 <span class="menu-shortcut">Ctrl+D</span></div>
+            </div>
+        </div>
+        <div class="menu-item">
+            图像
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="adjustBrightness()">亮度/对比度</div>
+                <div class="menu-dropdown-item" onclick="adjustHue()">色相/饱和度</div>
+                <div class="menu-dropdown-item" onclick="adjustLevels()">色阶</div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="rotateLeft()">向左旋转 90°</div>
+                <div class="menu-dropdown-item" onclick="rotateRight()">向右旋转 90°</div>
+                <div class="menu-dropdown-item" onclick="flipHorizontal()">水平翻转</div>
+                <div class="menu-dropdown-item" onclick="flipVertical()">垂直翻转</div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="crop()">裁剪</div>
+                <div class="menu-dropdown-item" onclick="resize()">图像大小</div>
+            </div>
+        </div>
+        <div class="menu-item">
+            滤镜
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="applyFilter('blur')">模糊</div>
+                <div class="menu-dropdown-item" onclick="applyFilter('sharpen')">锐化</div>
+                <div class="menu-dropdown-item" onclick="applyFilter('edge')">边缘检测</div>
+                <div class="menu-dropdown-item" onclick="applyFilter('emboss')">浮雕</div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="applyFilter('grayscale')">黑白</div>
+                <div class="menu-dropdown-item" onclick="applyFilter('sepia')">怀旧</div>
+                <div class="menu-dropdown-item" onclick="applyFilter('invert')">反色</div>
+                <div class="menu-dropdown-item" onclick="applyFilter('noise')">噪点</div>
+                <div class="menu-dropdown-item" onclick="applyFilter('pixelate')">马赛克</div>
+            </div>
+        </div>
+        <div class="menu-item">
+            图层
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="newLayer()">新建图层 <span class="menu-shortcut">Ctrl+Shift+N</span></div>
+                <div class="menu-dropdown-item" onclick="duplicateLayer()">复制图层</div>
+                <div class="menu-dropdown-item" onclick="deleteLayer()">删除图层</div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="mergeDown()">向下合并</div>
+                <div class="menu-dropdown-item" onclick="mergeAll()">合并所有图层</div>
+            </div>
+        </div>
+        <div class="menu-item">
+            帮助
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="showShortcuts()">快捷键</div>
+                <div class="menu-dropdown-item" onclick="showAbout()">关于</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="main-container">
+        <!-- 左侧工具栏 -->
+        <div class="left-panel">
+            <div class="tool-btn active" data-tool="move" title="移动工具 (V)">↖</div>
+            <div class="tool-btn" data-tool="rect-select" title="矩形选框 (M)">▭</div>
+            <div class="tool-btn" data-tool="ellipse-select" title="椭圆选框 (M)">◯</div>
+            <div class="tool-btn" data-tool="lasso" title="套索工具 (L)">〰</div>
+            <div class="tool-separator"></div>
+            <div class="tool-btn" data-tool="brush" title="画笔工具 (B)">🖌</div>
+            <div class="tool-btn" data-tool="eraser" title="橡皮擦 (E)">⚪</div>
+            <div class="tool-btn" data-tool="bucket" title="油漆桶 (G)">🪣</div>
+            <div class="tool-separator"></div>
+            <div class="tool-btn" data-tool="text" title="文字工具 (T)">T</div>
+            <div class="tool-btn" data-tool="crop" title="裁剪工具 (C)">✂</div>
+            <div class="tool-separator"></div>
+            <div class="tool-btn" data-tool="eyedropper" title="吸管工具 (I)">💧</div>
+            <div class="tool-btn" data-tool="zoom" title="缩放工具 (Z)">🔍</div>
+        </div>
+
+        <!-- 画布区域 -->
+        <div class="canvas-container" id="canvasContainer">
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <canvas id="mainCanvas"></canvas>
+                <canvas id="tempCanvas"></canvas>
+                <div class="text-input-overlay" id="textInputOverlay">
+                    <input type="text" id="textInput" placeholder="输入文字">
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧面板 -->
+        <div class="right-panel">
+            <!-- 颜色面板 -->
+            <div class="panel-section">
+                <div class="panel-title">颜色</div>
+                <div class="color-picker-wrapper">
+                    <input type="color" id="colorPicker" value="#000000">
+                    <div class="color-info">
+                        <div>前景色</div>
+                        <div id="colorHex">#000000</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 画笔设置 -->
+            <div class="panel-section" id="brushPanel" style="display: none;">
+                <div class="panel-title">画笔设置</div>
+                <div class="brush-size-row">
+                    <div class="adjustment-row">
+                        <span class="adjustment-label">大小</span>
+                        <input type="range" class="adjustment-slider" id="brushSize" min="1" max="100" value="10">
+                        <span class="adjustment-value" id="brushSizeValue">10</span>
+                    </div>
+                    <div class="adjustment-row">
+                        <span class="adjustment-label">硬度</span>
+                        <input type="range" class="adjustment-slider" id="brushHardness" min="0" max="100" value="100">
+                        <span class="adjustment-value" id="brushHardnessValue">100</span>
+                    </div>
+                </div>
+                <div class="brush-preview">
+                    <div id="brushPreviewCircle"></div>
+                </div>
+            </div>
+
+            <!-- 调整面板 -->
+            <div class="panel-section">
+                <div class="panel-title">调整</div>
+                <div class="adjustment-row">
+                    <span class="adjustment-label">亮度</span>
+                    <input type="range" class="adjustment-slider" id="brightness" min="-100" max="100" value="0">
+                    <span class="adjustment-value" id="brightnessValue">0</span>
+                </div>
+                <div class="adjustment-row">
+                    <span class="adjustment-label">对比度</span>
+                    <input type="range" class="adjustment-slider" id="contrast" min="-100" max="100" value="0">
+                    <span class="adjustment-value" id="contrastValue">0</span>
+                </div>
+                <div class="adjustment-row">
+                    <span class="adjustment-label">饱和度</span>
+                    <input type="range" class="adjustment-slider" id="saturation" min="-100" max="100" value="0">
+                    <span class="adjustment-value" id="saturationValue">0</span>
+                </div>
+                <div class="adjustment-row">
+                    <span class="adjustment-label">色相</span>
+                    <input type="range" class="adjustment-slider" id="hue" min="-180" max="180" value="0">
+                    <span class="adjustment-value" id="hueValue">0</span>
+                </div>
+                <button class="layer-btn" style="width: 100%; margin-top: 10px;" onclick="applyAdjustments()">应用调整</button>
+            </div>
+
+            <!-- 滤镜面板 -->
+            <div class="panel-section">
+                <div class="panel-title">滤镜</div>
+                <div class="filters-grid">
+                    <button class="filter-btn" onclick="applyFilter('blur')">模糊</button>
+                    <button class="filter-btn" onclick="applyFilter('sharpen')">锐化</button>
+                    <button class="filter-btn" onclick="applyFilter('edge')">边缘</button>
+                    <button class="filter-btn" onclick="applyFilter('grayscale')">黑白</button>
+                    <button class="filter-btn" onclick="applyFilter('sepia')">怀旧</button>
+                    <button class="filter-btn" onclick="applyFilter('invert')">反色</button>
+                </div>
+            </div>
+
+            <!-- 图层面板 -->
+            <div class="panel-section">
+                <div class="panel-title">图层</div>
+                <div class="layers-list" id="layersList">
+                    <div class="layer-item active">
+                        <span class="layer-visibility">👁</span>
+                        <span class="layer-name">背景</span>
+                        <input type="text" class="layer-opacity" value="100%">
+                    </div>
+                </div>
+                <div class="layer-actions">
+                    <button class="layer-btn" onclick="newLayer()">+ 新建</button>
+                    <button class="layer-btn" onclick="deleteLayer()">🗑 删除</button>
+                </div>
+            </div>
+
+            <!-- 历史记录 -->
+            <div class="panel-section">
+                <div class="panel-title">历史记录</div>
+                <div class="history-list" id="historyList">
+                    <div class="history-item current">打开</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <span class="status-item" id="canvasSize">800 x 600 px</span>
+        <span class="status-item" id="cursorPos">X: 0, Y: 0</span>
+        <span class="status-item" id="zoomLevel">100%</span>
+        <span class="status-item" id="currentTool">移动工具</span>
+    </div>
+
+    <!-- 新建图像对话框 -->
+    <div class="dialog-overlay" id="newImageDialog">
+        <div class="dialog">
+            <div class="dialog-title">新建图像</div>
+            <div class="dialog-content">
+                <div class="adjustment-row">
+                    <span class="adjustment-label">宽度</span>
+                    <input type="number" id="newWidth" value="800" style="flex: 1; margin-left: 10px;">
+                </div>
+                <div class="adjustment-row">
+                    <span class="adjustment-label">高度</span>
+                    <input type="number" id="newHeight" value="600" style="flex: 1; margin-left: 10px;">
+                </div>
+            </div>
+            <div class="dialog-buttons">
+                <button class="dialog-btn secondary" onclick="closeDialog('newImageDialog')">取消</button>
+                <button class="dialog-btn primary" onclick="createNewImage()">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐藏的文件输入 -->
+    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+
+    <script src="editor.js"></script>
+</body>
+</html>
